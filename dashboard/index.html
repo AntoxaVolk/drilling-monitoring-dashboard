@@ -1,0 +1,446 @@
+
+
+<h2 class="sr-only">Дашборд мониторинга бурения: параметры бурения в реальном времени, траектория скважины и LWD-кривые</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);font-size:14px;color:var(--color-text-primary)}
+.dash{padding:12px 0}
+.hdr{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.hdr-title{font-size:15px;font-weight:500}
+.hdr-sub{font-size:12px;color:var(--color-text-secondary);margin-top:2px}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;background:var(--color-background-success);color:var(--color-text-success)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px}
+.metric-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:4px}
+.metric-val{font-size:20px;font-weight:500}
+.metric-unit{font-size:11px;color:var(--color-text-secondary);margin-left:2px}
+.metric-delta{font-size:11px;margin-top:2px}
+.up{color:var(--color-text-success)}
+.down{color:var(--color-text-danger)}
+.row{display:grid;gap:10px;margin-bottom:10px}
+.row2{grid-template-columns:1fr 1fr}
+.row3{grid-template-columns:2fr 1fr}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px}
+.card-title{font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.alerts{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto}
+.alert-item{padding:7px 10px;border-radius:var(--border-radius-md);font-size:12px;display:flex;gap:8px;align-items:flex-start}
+.a-ok{background:var(--color-background-success);color:var(--color-text-success)}
+.a-warn{background:var(--color-background-warning);color:var(--color-text-warning)}
+.a-err{background:var(--color-background-danger);color:var(--color-text-danger)}
+.a-time{font-size:10px;opacity:.7;white-space:nowrap;margin-top:1px}
+.sql-block{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px;font-family:var(--font-mono);font-size:11px;color:var(--color-text-primary);overflow-x:auto;line-height:1.6;margin-top:8px}
+.kw{color:#1F6FEB;font-weight:500}
+.cm{color:var(--color-text-secondary)}
+.tabs{display:flex;gap:2px;margin-bottom:10px}
+.tab{padding:5px 12px;border-radius:var(--border-radius-md);font-size:12px;cursor:pointer;border:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);color:var(--color-text-secondary)}
+.tab.active{background:var(--color-background-primary);color:var(--color-text-primary);font-weight:500;border-color:var(--color-border-primary)}
+.section{display:none}.section.active{display:block}
+</style>
+
+<div class="dash">
+<div class="hdr">
+  <div>
+    <div class="hdr-title">Скважина № 247Г-Б · Куст 12 · Приобское м/р</div>
+    <div class="hdr-sub">Горизонтальная · Горизонт: Ач3 · Азимут: 47° · Проектная глубина: 4 200 м</div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <div style="font-size:12px;color:var(--color-text-secondary)">Инженер: Волков А.А.</div>
+    <div class="badge"><span class="dot"></span>Бурение активно</div>
+  </div>
+</div>
+
+<div class="metrics" id="metrics">
+  <div class="metric"><div class="metric-label">Глубина (MD)</div><div class="metric-val" id="m-md">3 247<span class="metric-unit">м</span></div><div class="metric-delta up" id="d-md">↑ +14 м/ч</div></div>
+  <div class="metric"><div class="metric-label">Глубина (TVD)</div><div class="metric-val" id="m-tvd">2 891<span class="metric-unit">м</span></div><div class="metric-delta" style="color:var(--color-text-secondary)" id="d-tvd">Горизонт. уч.</div></div>
+  <div class="metric"><div class="metric-label">Зенитный угол</div><div class="metric-val" id="m-inc">89.4<span class="metric-unit">°</span></div><div class="metric-delta up" id="d-inc">В норме</div></div>
+  <div class="metric"><div class="metric-label">РОП</div><div class="metric-val" id="m-rop">14.2<span class="metric-unit">м/ч</span></div><div class="metric-delta up" id="d-rop">↑ план +2.1</div></div>
+  <div class="metric"><div class="metric-label">Давление СПП</div><div class="metric-val" id="m-spp">187<span class="metric-unit">бар</span></div><div class="metric-delta" style="color:var(--color-text-secondary)" id="d-spp">Норма</div></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('drilling')">Параметры бурения</div>
+  <div class="tab" onclick="switchTab('traj')">Траектория</div>
+  <div class="tab" onclick="switchTab('lwd')">LWD-кривые</div>
+  <div class="tab" onclick="switchTab('sql')">SQL / схема БД</div>
+</div>
+
+<div id="s-drilling" class="section active">
+  <div class="row row3">
+    <div class="card">
+      <div class="card-title">Параметры бурения · реальное время</div>
+      <div style="position:relative;height:220px"><canvas id="chartDrilling" role="img" aria-label="График параметров бурения в реальном времени: нагрузка на долото, обороты, расход промывочной жидкости"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Журнал событий</div>
+      <div class="alerts" id="alertList">
+        <div class="alert-item a-ok"><div style="flex:1">Параметры в норме. ГНВП — не выявлено.<div class="a-time">08:42</div></div></div>
+        <div class="alert-item a-warn"><div style="flex:1">Торк вырос до 18.4 кН·м. Предупреждение.<div class="a-time">08:31</div></div></div>
+        <div class="alert-item a-ok"><div style="flex:1">Восстановлен канал WITS. Данные получены.<div class="a-time">08:19</div></div></div>
+        <div class="alert-item a-err"><div style="flex:1">Потеря сигнала WITS. НПВ 4 мин.<div class="a-time">08:15</div></div></div>
+        <div class="alert-item a-warn"><div style="flex:1">Рост давления СПП +22 бар за 5 мин.<div class="a-time">07:58</div></div></div>
+        <div class="alert-item a-ok"><div style="flex:1">Смена долота. Долбление № 7 начато.<div class="a-time">06:30</div></div></div>
+        <div class="alert-item a-ok"><div style="flex:1">Начало суточной смены. Бурение продолжается.<div class="a-time">06:00</div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="row row2">
+    <div class="card">
+      <div class="card-title">Нагрузка на долото · WOB (тс)</div>
+      <div style="position:relative;height:130px"><canvas id="chartWOB" role="img" aria-label="График нагрузки на долото"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Момент на роторе · Torque (кН·м)</div>
+      <div style="position:relative;height:130px"><canvas id="chartTorque" role="img" aria-label="График момента на роторе"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div id="s-traj" class="section">
+  <div class="row row2">
+    <div class="card">
+      <div class="card-title">Вертикальная проекция (MD vs TVD)</div>
+      <div style="position:relative;height:280px"><canvas id="chartVS" role="img" aria-label="Вертикальная проекция траектории скважины: кривая горизонтальная скважина с набором зенитного угла"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Плановая проекция (Север / Восток)</div>
+      <div style="position:relative;height:280px"><canvas id="chartPlan" role="img" aria-label="Плановая проекция траектории скважины"></canvas></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:0">
+    <div class="card-title">Таблица инклинометрии (сокращённая)</div>
+    <div style="overflow-x:auto">
+    <table style="width:100%;font-size:12px;border-collapse:collapse" id="inclTable">
+      <thead><tr style="border-bottom:0.5px solid var(--color-border-tertiary)">
+        <th style="text-align:left;padding:6px 8px;font-weight:500;color:var(--color-text-secondary)">MD, м</th>
+        <th style="text-align:left;padding:6px 8px;font-weight:500;color:var(--color-text-secondary)">Зенит, °</th>
+        <th style="text-align:left;padding:6px 8px;font-weight:500;color:var(--color-text-secondary)">Азимут, °</th>
+        <th style="text-align:left;padding:6px 8px;font-weight:500;color:var(--color-text-secondary)">TVD, м</th>
+        <th style="text-align:left;padding:6px 8px;font-weight:500;color:var(--color-text-secondary)">Север, м</th>
+        <th style="text-align:left;padding:6px 8px;font-weight:500;color:var(--color-text-secondary)">Восток, м</th>
+        <th style="text-align:left;padding:6px 8px;font-weight:500;color:var(--color-text-secondary)">DLS, °/30м</th>
+      </tr></thead>
+      <tbody id="inclBody"></tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<div id="s-lwd" class="section">
+  <div class="row row2">
+    <div class="card">
+      <div class="card-title">ГК (Гамма-каротаж) · API</div>
+      <div style="position:relative;height:300px"><canvas id="chartGR" role="img" aria-label="Кривая гамма-каротажа по глубине скважины"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">УЭС · Ом·м (глубинное)</div>
+      <div style="position:relative;height:300px"><canvas id="chartRes" role="img" aria-label="Кривая удельного электрического сопротивления по глубине"></canvas></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:0">
+    <div class="card-title">Интерпретация по горизонту Ач3</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px">
+      <div class="metric"><div class="metric-label">Кровля пласта</div><div class="metric-val">2 847<span class="metric-unit">м TVD</span></div></div>
+      <div class="metric"><div class="metric-label">Нефтенасыщ. ГК</div><div class="metric-val" style="color:var(--color-text-success)">18–42<span class="metric-unit">API</span></div></div>
+      <div class="metric"><div class="metric-label">УЭС (нефть)</div><div class="metric-val" style="color:var(--color-text-success)">&gt;15<span class="metric-unit">Ом·м</span></div></div>
+      <div class="metric"><div class="metric-label">Вскрыто пласта</div><div class="metric-val">1 420<span class="metric-unit">м</span></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="s-sql" class="section">
+  <div class="row row2">
+    <div class="card">
+      <div class="card-title">Схема базы данных (PostgreSQL)</div>
+      <div class="sql-block"><span class="cm">-- Таблица скважин</span>
+<span class="kw">CREATE TABLE</span> wells (
+  well_id      <span class="kw">SERIAL PRIMARY KEY</span>,
+  well_name    <span class="kw">VARCHAR</span>(50),
+  field_name   <span class="kw">VARCHAR</span>(100),
+  cluster_no   <span class="kw">INT</span>,
+  well_type    <span class="kw">VARCHAR</span>(20),
+  spud_date    <span class="kw">DATE</span>,
+  td_planned   <span class="kw">FLOAT</span>    <span class="cm">-- проектная глубина, м</span>
+);
+
+<span class="cm">-- Инклинометрия</span>
+<span class="kw">CREATE TABLE</span> inclinometry (
+  id         <span class="kw">SERIAL PRIMARY KEY</span>,
+  well_id    <span class="kw">INT REFERENCES</span> wells(well_id),
+  md         <span class="kw">FLOAT</span>,  <span class="cm">-- измеренная глубина</span>
+  inclination <span class="kw">FLOAT</span>, <span class="cm">-- зенитный угол, °</span>
+  azimuth    <span class="kw">FLOAT</span>,  <span class="cm">-- азимут, °</span>
+  tvd        <span class="kw">FLOAT</span>,  <span class="cm">-- вертикальная глубина</span>
+  northing   <span class="kw">FLOAT</span>,
+  easting    <span class="kw">FLOAT</span>,
+  dls        <span class="kw">FLOAT</span>,  <span class="cm">-- интенсивность набора °/30м</span>
+  ts_utc     <span class="kw">TIMESTAMPTZ DEFAULT NOW</span>()
+);
+
+<span class="cm">-- Параметры бурения (1 запись/мин)</span>
+<span class="kw">CREATE TABLE</span> drilling_params (
+  id         <span class="kw">SERIAL PRIMARY KEY</span>,
+  well_id    <span class="kw">INT REFERENCES</span> wells(well_id),
+  ts_utc     <span class="kw">TIMESTAMPTZ</span>,
+  md         <span class="kw">FLOAT</span>,
+  rop        <span class="kw">FLOAT</span>,  <span class="cm">-- механическая скорость</span>
+  wob        <span class="kw">FLOAT</span>,  <span class="cm">-- нагрузка на долото, тс</span>
+  rpm        <span class="kw">INT</span>,    <span class="cm">-- обороты</span>
+  torque     <span class="kw">FLOAT</span>,  <span class="cm">-- момент, кН·м</span>
+  flow_rate  <span class="kw">FLOAT</span>,  <span class="cm">-- расход, л/с</span>
+  spp        <span class="kw">FLOAT</span>   <span class="cm">-- давление СПП, бар</span>
+);
+
+<span class="cm">-- LWD-кривые</span>
+<span class="kw">CREATE TABLE</span> lwd_curves (
+  id         <span class="kw">SERIAL PRIMARY KEY</span>,
+  well_id    <span class="kw">INT REFERENCES</span> wells(well_id),
+  md         <span class="kw">FLOAT</span>,
+  gr         <span class="kw">FLOAT</span>,  <span class="cm">-- гамма-каротаж, API</span>
+  res_deep   <span class="kw">FLOAT</span>,  <span class="cm">-- УЭС глубинное</span>
+  res_med    <span class="kw">FLOAT</span>,  <span class="cm">-- УЭС среднее</span>
+  res_sh     <span class="kw">FLOAT</span>   <span class="cm">-- УЭС мелкое</span>
+);</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Аналитические SQL-запросы</div>
+      <div class="sql-block"><span class="cm">-- Среднее РОП по интервалам бурения</span>
+<span class="kw">SELECT</span>
+  <span class="kw">FLOOR</span>(md / 100) * 100 <span class="kw">AS</span> md_interval,
+  <span class="kw">ROUND</span>(<span class="kw">AVG</span>(rop)::numeric, 2) <span class="kw">AS</span> avg_rop,
+  <span class="kw">ROUND</span>(<span class="kw">AVG</span>(wob)::numeric, 2) <span class="kw">AS</span> avg_wob,
+  <span class="kw">COUNT</span>(*) <span class="kw">AS</span> records
+<span class="kw">FROM</span> drilling_params
+<span class="kw">WHERE</span> well_id = 247
+  <span class="kw">AND</span> rop &gt; 0
+<span class="kw">GROUP BY</span> md_interval
+<span class="kw">ORDER BY</span> md_interval;
+
+<span class="cm">-- Выявление аномалий (ГНВП-риск)</span>
+<span class="kw">SELECT</span>
+  ts_utc, md, spp,
+  <span class="kw">LAG</span>(spp) <span class="kw">OVER</span> (<span class="kw">ORDER BY</span> ts_utc) <span class="kw">AS</span> prev_spp,
+  spp - <span class="kw">LAG</span>(spp) <span class="kw">OVER</span> (<span class="kw">ORDER BY</span> ts_utc) <span class="kw">AS</span> delta_spp
+<span class="kw">FROM</span> drilling_params
+<span class="kw">WHERE</span> well_id = 247
+  <span class="kw">AND</span> spp - <span class="kw">LAG</span>(spp) <span class="kw">OVER</span> (
+      <span class="kw">ORDER BY</span> ts_utc) &gt; 20
+<span class="kw">ORDER BY</span> ts_utc <span class="kw">DESC</span>;
+
+<span class="cm">-- NPT (НПВ) анализ за период</span>
+<span class="kw">SELECT</span>
+  <span class="kw">DATE_TRUNC</span>(<span class="cm">'day'</span>, ts_utc) <span class="kw">AS</span> day,
+  <span class="kw">SUM</span>(<span class="kw">CASE WHEN</span> rop = 0
+    <span class="kw">THEN</span> 1 <span class="kw">ELSE</span> 0 <span class="kw">END</span>) <span class="kw">AS</span> npt_minutes,
+  <span class="kw">ROUND</span>(100.0 * <span class="kw">SUM</span>(<span class="kw">CASE WHEN</span> rop = 0
+    <span class="kw">THEN</span> 1 <span class="kw">ELSE</span> 0 <span class="kw">END</span>) / <span class="kw">COUNT</span>(*), 1) <span class="kw">AS</span> npt_pct
+<span class="kw">FROM</span> drilling_params
+<span class="kw">WHERE</span> well_id = 247
+<span class="kw">GROUP BY</span> day <span class="kw">ORDER BY</span> day;
+
+<span class="cm">-- Литология по ГК (коллектор vs глина)</span>
+<span class="kw">SELECT</span> md,
+  <span class="kw">CASE WHEN</span> gr &lt; 45  <span class="kw">THEN</span> <span class="cm">'Нефтеносный песчаник'</span>
+       <span class="kw">WHEN</span> gr &lt; 75  <span class="kw">THEN</span> <span class="cm">'Алевролит'</span>
+       <span class="kw">ELSE</span> <span class="cm">'Аргиллит/глина'</span>
+  <span class="kw">END AS</span> lithology
+<span class="kw">FROM</span> lwd_curves
+<span class="kw">WHERE</span> well_id = 247
+<span class="kw">ORDER BY</span> md;</div>
+    </div>
+  </div>
+  <div style="margin-top:8px;padding:10px 14px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);font-size:12px;color:var(--color-text-secondary)">
+    Стек: Python · PostgreSQL · Apache Airflow (ETL-пайплайн) · Pandas · Matplotlib / Plotly · Git
+    &nbsp;·&nbsp; Данные загружаются через WITS-парсер (Python) → PostgreSQL → дашборд
+  </div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const names=['drilling','traj','lwd','sql'];
+    t.classList.toggle('active',names[i]===name);
+  });
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s-'+name).classList.add('active');
+  if(name==='traj'&&!window.trajInit){initTraj();window.trajInit=true;}
+  if(name==='lwd'&&!window.lwdInit){initLWD();window.lwdInit=true;}
+}
+
+const isDark=matchMedia('(prefers-color-scheme: dark)').matches;
+const gridC=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.07)';
+const textC=isDark?'#9a9a9a':'#666';
+
+function baseOpts(yLabel,min,max){
+  return{responsive:true,maintainAspectRatio:false,animation:{duration:0},
+    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},
+    scales:{
+      x:{grid:{color:gridC},ticks:{color:textC,font:{size:10},maxTicksLimit:8}},
+      y:{min,max,grid:{color:gridC},ticks:{color:textC,font:{size:10}},
+         title:{display:true,text:yLabel,color:textC,font:{size:10}}}
+    }};
+}
+
+const N=50;
+function mkLabels(){const l=[];for(let i=N;i>=0;i--)l.push(i===0?'сейчас':(i%10===0?i+'м':''));return l;}
+function randWalk(base,amp,n){const a=[base];for(let i=1;i<n;i++)a.push(Math.max(1,a[i-1]+(Math.random()-.5)*amp));return a;}
+
+let ropData=randWalk(14,3,N+1);
+let rpmData=randWalk(85,8,N+1);
+let flowData=randWalk(32,2,N+1);
+let wobData=randWalk(12,2,N+1);
+let torqData=randWalk(13,2.5,N+1);
+const labels=mkLabels();
+
+const ctxD=document.getElementById('chartDrilling').getContext('2d');
+const chartD=new Chart(ctxD,{type:'line',
+  data:{labels,datasets:[
+    {label:'РОП (м/ч)',data:[...ropData],borderColor:'#378ADD',borderWidth:1.5,tension:.3,pointRadius:0,yAxisID:'y'},
+    {label:'RPM/10',data:rpmData.map(v=>+(v/10).toFixed(2)),borderColor:'#1D9E75',borderWidth:1.5,tension:.3,pointRadius:0,yAxisID:'y'},
+    {label:'Расход л/с',data:[...flowData],borderColor:'#BA7517',borderWidth:1.5,tension:.3,pointRadius:0,yAxisID:'y'}
+  ]},
+  options:{...baseOpts('',0,45),plugins:{legend:{display:true,position:'top',labels:{font:{size:10},boxWidth:10,padding:8,color:textC}},tooltip:{mode:'index',intersect:false}}}
+});
+
+const ctxW=document.getElementById('chartWOB').getContext('2d');
+const chartW=new Chart(ctxW,{type:'line',
+  data:{labels,datasets:[{label:'WOB',data:[...wobData],borderColor:'#D85A30',borderWidth:1.5,tension:.3,pointRadius:0,fill:true,backgroundColor:'rgba(216,90,48,0.08)'}]},
+  options:baseOpts('тс',0,25)});
+
+const ctxT=document.getElementById('chartTorque').getContext('2d');
+const chartT=new Chart(ctxT,{type:'line',
+  data:{labels,datasets:[{label:'Torque',data:[...torqData],borderColor:'#7F77DD',borderWidth:1.5,tension:.3,pointRadius:0,fill:true,backgroundColor:'rgba(127,119,221,0.08)'}]},
+  options:baseOpts('кН·м',0,25)});
+
+function updateRealtime(){
+  ropData.shift();ropData.push(Math.max(2,ropData[ropData.length-1]+(Math.random()-.45)*2.5));
+  rpmData.shift();rpmData.push(Math.max(40,rpmData[rpmData.length-1]+(Math.random()-.5)*6));
+  flowData.shift();flowData.push(Math.max(20,flowData[flowData.length-1]+(Math.random()-.5)*1.5));
+  wobData.shift();wobData.push(Math.max(2,wobData[wobData.length-1]+(Math.random()-.5)*1.5));
+  torqData.shift();torqData.push(Math.max(3,torqData[torqData.length-1]+(Math.random()-.48)*2));
+
+  chartD.data.datasets[0].data=[...ropData];
+  chartD.data.datasets[1].data=rpmData.map(v=>+(v/10).toFixed(2));
+  chartD.data.datasets[2].data=[...flowData];
+  chartD.update();
+  chartW.data.datasets[0].data=[...wobData];chartW.update();
+  chartT.data.datasets[0].data=[...torqData];chartT.update();
+
+  const rop=ropData[ropData.length-1];
+  const spp=187+Math.round((Math.random()-.5)*15);
+  document.getElementById('m-rop').innerHTML=rop.toFixed(1)+'<span class="metric-unit">м/ч</span>';
+  document.getElementById('m-spp').innerHTML=spp+'<span class="metric-unit">бар</span>';
+}
+setInterval(updateRealtime,2000);
+
+function buildInclData(){
+  const pts=[];
+  const totalMD=3247;
+  const step=100;
+  let tvd=0,north=0,east=0;
+  const az0=47;
+  for(let md=0;md<=totalMD;md+=step){
+    let inc;
+    if(md<=500) inc=md*0.004;
+    else if(md<=1700) inc=2+(md-500)*0.073;
+    else inc=Math.min(90,89+(Math.random()-.5)*1.5);
+    const incR=inc*Math.PI/180;
+    const azR=az0*Math.PI/180+(Math.random()-.5)*0.02;
+    if(md>0){
+      const dm=step;
+      tvd+=dm*Math.cos(incR);
+      north+=dm*Math.sin(incR)*Math.cos(azR);
+      east+=dm*Math.sin(incR)*Math.sin(azR);
+    }
+    const dls=md>500&&md<=1700?2.2+(Math.random()-.5)*.4:md<=500?0.1:0.2+(Math.random()-.5)*.2;
+    pts.push({md,inc:+inc.toFixed(2),az:az0+(Math.random()-.5)*3,tvd:+tvd.toFixed(1),north:+north.toFixed(1),east:+east.toFixed(1),dls:+dls.toFixed(2)});
+  }
+  return pts;
+}
+
+function initTraj(){
+  const pts=buildInclData();
+  const tbody=document.getElementById('inclBody');
+  pts.forEach((p,i)=>{
+    const tr=document.createElement('tr');
+    tr.style.borderBottom='0.5px solid var(--color-border-tertiary)';
+    if(i%2===0)tr.style.background='var(--color-background-secondary)';
+    tr.innerHTML=`<td style="padding:5px 8px">${p.md}</td><td style="padding:5px 8px">${p.inc}</td><td style="padding:5px 8px">${p.az.toFixed(1)}</td><td style="padding:5px 8px">${p.tvd}</td><td style="padding:5px 8px">${p.north}</td><td style="padding:5px 8px">${p.east}</td><td style="padding:5px 8px">${p.dls}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  const ctxVS=document.getElementById('chartVS').getContext('2d');
+  new Chart(ctxVS,{type:'line',
+    data:{labels:pts.map(p=>p.md),datasets:[
+      {label:'Траектория',data:pts.map(p=>({x:p.north,y:-p.tvd})),borderColor:'#378ADD',borderWidth:2,pointRadius:0,tension:.3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:400},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`TVD: ${Math.abs(c.parsed.y).toFixed(0)} м, N: ${c.parsed.x.toFixed(0)} м`}}},
+      scales:{
+        x:{title:{display:true,text:'Горизонт. отход, м',color:textC,font:{size:10}},grid:{color:gridC},ticks:{color:textC,font:{size:10}}},
+        y:{title:{display:true,text:'TVD, м (↓)',color:textC,font:{size:10}},grid:{color:gridC},ticks:{color:textC,font:{size:10},callback:v=>Math.abs(v)}}
+      }}});
+
+  const ctxPL=document.getElementById('chartPlan').getContext('2d');
+  new Chart(ctxPL,{type:'scatter',
+    data:{datasets:[
+      {label:'Траектория',data:pts.map(p=>({x:p.east,y:p.north})),borderColor:'#1D9E75',backgroundColor:'#1D9E75',borderWidth:1.5,pointRadius:1,showLine:true,tension:.3},
+      {label:'Старт',data:[{x:0,y:0}],borderColor:'#D85A30',backgroundColor:'#D85A30',pointRadius:6,pointStyle:'triangle'},
+      {label:'Забой',data:[{x:pts[pts.length-1].east,y:pts[pts.length-1].north}],borderColor:'#BA7517',backgroundColor:'#BA7517',pointRadius:5}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:400},
+      plugins:{legend:{display:true,position:'top',labels:{font:{size:10},boxWidth:8,padding:6,color:textC}},tooltip:{callbacks:{label:c=>`E: ${c.parsed.x.toFixed(0)} м, N: ${c.parsed.y.toFixed(0)} м`}}},
+      scales:{
+        x:{title:{display:true,text:'Восток, м',color:textC,font:{size:10}},grid:{color:gridC},ticks:{color:textC,font:{size:10}}},
+        y:{title:{display:true,text:'Север, м',color:textC,font:{size:10}},grid:{color:gridC},ticks:{color:textC,font:{size:10}}}
+      }}});
+}
+
+function initLWD(){
+  const depths=[];const gr=[];const res=[];
+  for(let d=1600;d<=3247;d+=10){
+    depths.push(d);
+    let grV;
+    if(d>=2847&&d<=3247){
+      grV=Math.random()<.7?18+Math.random()*24:70+Math.random()*80;
+    } else {
+      grV=60+Math.random()*90;
+    }
+    gr.push(+grV.toFixed(1));
+    let resV;
+    if(d>=2847&&d<=3247&&grV<45){
+      resV=20+Math.random()*80;
+    } else {
+      resV=1+Math.random()*4;
+    }
+    res.push(+resV.toFixed(2));
+  }
+
+  const ctxGR=document.getElementById('chartGR').getContext('2d');
+  new Chart(ctxGR,{type:'line',
+    data:{labels:depths,datasets:[
+      {label:'ГК',data:gr,borderColor:'#3C3489',borderWidth:1,tension:0,pointRadius:0,fill:true,backgroundColor:'rgba(60,52,137,0.07)'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:{duration:600},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`GR: ${c.parsed.x} API`}}},
+      scales:{
+        y:{reverse:false,title:{display:true,text:'Глубина MD, м',color:textC,font:{size:10}},grid:{color:gridC},ticks:{color:textC,font:{size:9},maxTicksLimit:10}},
+        x:{min:0,max:200,title:{display:true,text:'API',color:textC,font:{size:10}},grid:{color:gridC},ticks:{color:textC,font:{size:10}}}
+      }}});
+
+  const ctxR=document.getElementById('chartRes').getContext('2d');
+  new Chart(ctxR,{type:'line',
+    data:{labels:depths,datasets:[
+      {label:'УЭС',data:res,borderColor:'#D85A30',borderWidth:1,tension:0,pointRadius:0,fill:true,backgroundColor:'rgba(216,90,48,0.07)'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:{duration:600},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`Res: ${c.parsed.x} Ом·м`}}},
+      scales:{
+        y:{reverse:false,title:{display:true,text:'Глубина MD, м',color:textC,font:{size:10}},grid:{color:gridC},ticks:{color:textC,font:{size:9},maxTicksLimit:10}},
+        x:{type:'logarithmic',min:0.1,max:200,title:{display:true,text:'Ом·м (log)',color:textC,font:{size:10}},grid:{color:gridC},ticks:{color:textC,font:{size:10}}}
+      }}});
+}
+</script>
