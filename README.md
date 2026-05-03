@@ -1,4 +1,4 @@
----  Drilling Monitoring Dashboard
+##  Drilling Monitoring Dashboard
 
 **Дашборд мониторинга бурения** — учебный проект инженера MWD/LWD.  
 Демонстрирует применение Python и SQL для анализа данных реального времени в нефтегазовой отрасли.
@@ -10,7 +10,7 @@
 
 ---
 
---- О проекте
+## О проекте
 
 ![Dashboard](screenshots/dashboard.png)
 
@@ -21,7 +21,7 @@
 
 ---
 
---- Возможности
+## Возможности
 
 | Модуль | Описание |
 |--------|----------|
@@ -35,7 +35,7 @@
 
 ---
 
---- Быстрый старт
+## Быстрый старт
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/drilling-monitoring-dashboard.git
@@ -51,9 +51,9 @@ python python/npt_report.py       # отчёт по НПВ
 
 ---
 
---- Ключевые алгоритмы
+## Ключевые алгоритмы
 
---- Метод минимальной кривизны (Minimum Curvature)
+## Метод минимальной кривизны (Minimum Curvature)
 
 Стандартный промышленный метод расчёта траектории горизонтальных скважин.
 
@@ -72,7 +72,7 @@ def minimum_curvature(md1, md2, inc1, inc2, az1, az2):
     return dTVD, dNorth, dEast
 ```
 
---- Детекция аномалий давления (признак ГНВП)
+## Детекция аномалий давления (признак ГНВП)
 
 ```python
 def detect_pressure_anomaly(df, threshold=20, window=5):
@@ -82,7 +82,7 @@ def detect_pressure_anomaly(df, threshold=20, window=5):
 
 ---
 
---- Структура базы данных
+## Структура базы данных
 
 ```
 wells ──────────────┬── inclinometry    (md, inc, az, tvd, north, east, dls)
@@ -94,7 +94,7 @@ wells ──────────────┬── inclinometry    (md, i
 
 ---
 
---- Пример аналитики: НПВ по суткам
+## Пример аналитики: НПВ по суткам
 
 ```
 Дата        | НПВ (мин) | НПВ %  | Причина
@@ -106,7 +106,7 @@ wells ──────────────┬── inclinometry    (md, i
 
 ---
 
---- Об авторе
+## Об авторе
 
 **Антон Волков** — инженер MWD/LWD с 10-летним опытом (Weatherford Russia).  
 Специализация: мониторинг бурения 24/7, телеметрия LWD, выявление осложнений (ГНВП/поглощения/НПВ).  
